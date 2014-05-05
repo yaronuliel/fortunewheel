@@ -5,6 +5,11 @@
  */
 (function($, w, d){
 	$.fn.fortuneWheel = function(options){
+		var Browser = {
+			isAndroid: function(){
+				return w.navigator.userAgent.toLowerCase().indexOf("android")>-1;
+			}	
+		};
 		var instances = [];
 		var FortuneWheel = function(elem, options){
 			var defaultOptions = {
@@ -13,7 +18,7 @@
 				hideElem: true,
 				wordSpace: 15,
 				spaceClass: "word-space",
-				showCaretSymbol: false, //works on chrome only
+				showCaretSymbol: true, //works on chrome only
 				placeholderClass: 'fortune-wheel',
 				allowNumbers: false,
 				trimValue: true,
@@ -86,7 +91,6 @@
 			} 
 			
 			function initEventListeners(){
-				
 				$(chars).change(function(){
 			        elem.val(instance.getValue());
 			        fullTrigger();
@@ -121,35 +125,49 @@
 			                (rtl?prev:next).focus();
 			                return false;
 			           
-			        } 
-			    }).keypress(function(e){
+			        }
+			    }).on(Browser.isAndroid()?"input":"keypress",function(e){
 			        var pos = $(this).data("pos");
 			        var next = getByPos(pos+1);
-			        var key = String.fromCharCode(e.which);
+			        var keycode = e.keyCode || e.which || 0;
+			        var key = String.fromCharCode(keycode);
 			        if(!options.allowNumbers && !isNaN(key)){
 			        	return false;
 			        }
-			        
-			        if(options.restrict && !(new RegExp('['+options.restrict+']')).test(key)){
-			        	console.log("restricted");
+			        if(options.restrict && keycode!=0 && !(new RegExp('['+options.restrict+']')).test(key)){
 			        	return false;
 			        }
-			        if(key!=""){
+			        if(key!="" && keycode!=0){
 			            $(this).val(key).trigger("change");
 			        }
-			        if(next.length==0 && options.blurOnLastChar){
+			        if(next.length==0 && (options.blurOnLastChar || keycode==0)){
 			        	$(this).blur();
 			        } else {
-			        	next.focus();
+			        	if(Browser.isAndroid()){
+			        		$(this).val($(this).val().substring(0,1));
+			        	}
+			        	if(Browser.isAndroid() && next.val()!=""){
+			        		$(this).blur();
+			        	} else {
+			        		next.focus();
+			        	}
 			        }
-			        return false;
+			        if(keycode!=0){
+			        	return false;
+			        }
 			    });
+				
+				if(Browser.isAndroid()){
+					chars.focus(function(){
+						$(this).val("").trigger("change");
+					})
+				}
 				
 				if(!options.allowBlanks){
 					var focusclass = "focus"+(Math.floor(Math.random()*100000));
 					$(chars).focus(function(e){
 						if($(this).val()!="" || $(this).hasClass(focusclass)){
-							$(this).removeClass("focusing");
+							$(this).removeClass(focusclass);
 							return true;
 						} else {
 							$(chars).each(function(){
@@ -162,6 +180,7 @@
 					});
 				}
 			}
+			
 			function getPattern(){
 				var from = [];
 				if(options.pattern.length>0){

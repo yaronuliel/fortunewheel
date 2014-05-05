@@ -3,9 +3,10 @@
 <head>
 	<meta charset="UTF-8" />
 	<title>Document</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 	<script src="https://code.jquery.com/jquery-1.11.0.min.js"></script>
-	<script src="jquery.fortunewheel.min.js"></script>
-	<link rel="stylesheet" href="jquery.fortunewheel.css" />
+	<script src="jquery.fortunewheel.js?r=<?=rand(0,12000);?>"></script>
+	<link rel="stylesheet" href="jquery.fortunewheel.css?r=<?=rand(0,12000);?>" />
 	<script>
 	$(document).ready(function(){
 		$("#result").fortuneWheel({
@@ -25,10 +26,11 @@
 			allowNumbers: false, 				// Whether to allow numbers input (doesn't work well when in RTL)
 			trimValue: true 					// Whether to trim the result when it is returned
 			*/
-			restrict: "א-תa-zA-Z",				// Regular expression set of characthers allowed to be entered
+			//restrict: "א-תa-zA-Z",				// Regular expression set of characthers allowed to be entered
 			full: function(val){ 				//callback when full
 				$("#full_caption").text("Full: "+val);
 			},
+			allowBlanks: true,
 			partial: function(val){ 			//callback when change partially
 				$("#full_caption").text("NOT FULL");
 			}
