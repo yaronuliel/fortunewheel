@@ -39,3 +39,5 @@ Example For Use:
 When the HTML is:
 	<input type="text" class="wof" data-pattern="[2,3,2]" />
 	<div id="result_demo"></div>
+	
+	
