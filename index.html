@@ -28,7 +28,8 @@
 			filledClass: 'filled', 				// A class added to input when it is fill
 			*/
 			//restrict: "א-תa-zA-Z",				// Regular expression's set of characthers allowed to be entered
-			byWords: true,						// Split the pattern to words instead of chars
+			//byWords: true,						// Split the pattern to words instead of chars
+			debug: FortuneWheel.getDebugger("#log"),
 			full: function(val){ 				// Callback when full
 				$("#result_demo").text("Full: "+val);
 			},
@@ -43,5 +44,6 @@
 	<div id="chars"></div>
 	<input type="text" class="wof" data-pattern="[2,3,2]" />
 	<div id="result_demo"></div>
+	<div id="log"></div>
 </body>
 </html>

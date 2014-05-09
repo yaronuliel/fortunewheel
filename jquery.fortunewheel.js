@@ -3,15 +3,64 @@
  * Author: Yaron Uliel
  * Copyright: 2014 Social It Tech Marketing
  */
+/*window.FortuneWheel = {
+	getConsoleDebugger: function(){
+		return {
+			clear: function(){
+				console.clear();
+			},
+			log: function(){
+			    var i = -1, l = arguments.length, args = [], fn = 'console.log(args)';
+			    while(++i<l){
+			        args.push('args['+i+']');
+			    };
+			    fn = new Function('args',fn.replace(/args/,args.join(',')));
+			    fn(arguments);
+			}
+		}
+	},
+	getDebugger: function(elem){
+		return {
+			clear: function(){
+				if(elem!=""){
+					$(elem).html("");
+				}
+			}, 
+			log: function(){
+				if(elem!=""){
+					var string = "";
+					for(var i in arguments){
+						string+=arguments[i].toString();
+						if(i<arguments.length-1){
+							string+=", ";
+						}
+					}
+					$(elem).append($("<div>").text(string));
+				}
+			}
+		};
+	},
+	init: function(selector,options){
+		$(selector).fortuneWheel(options);
+	}
+};*/
+
 (function($, w, d){ 
 	$.fn.fortuneWheel = function(options){
 		var Browser = {
+			ua: w.navigator.userAgent.toLowerCase(),
 			isAndroid: function(){
-				return w.navigator.userAgent.toLowerCase().indexOf("android")>-1;
+				return Browser.ua.indexOf("android")>-1;
 			},
 			isIOS: function(){
-				var iOS = ( navigator.userAgent.match(/(iPad|iPhone|iPod)/g) ? true : false );
+				var iOS = ( Browser.ua.match(/(ipad|iphone|ipod)/g) ? true : false );
 				return iOS;
+			},
+			isOldAndroid: function(){
+				return Browser.ua.indexOf("android 2.")>-1;
+			},
+			isProblematic: function(){
+				return Browser.isIOS() || Browser.isOldAndroid();
 			}
 		};
 		var instances = [];
@@ -34,6 +83,7 @@
 				filledClass: 'filled',
 				eventFull: 'change-full',
 				eventNotFull: 'change-not-full',
+				//debug: w.FortuneWheel.getDebugger(""),
 				full: function(value){}, //callback when full
 				partial: function(value){} //callback when change partially
 			};
@@ -103,102 +153,109 @@
 		        }
 			} 
 			
+			function log(){
+				if(options.debug){
+					options.debug.log.apply(this, arguments);
+				}
+			}
+			
 			function initEventListeners(){
 				$(chars).change(function(){
 			        elem.val(instance.getValue());
 			        fullTrigger();
 				}).keyup(function(e){
 					fullTrigger();
-			    }).keydown(function(e){
-			        var rtl = isRTL($(this));
-			        var pos = $(this).data("pos");
-			        var next = getByPos(pos+1);
-			        var prev = getByPos(pos-1);
-			        switch(e.keyCode){
-			            case 46: //delete
-			            	if(Browser.isIOS() || option.byWords){
-			            		break;
-			            	}
-			            	if(options.allowBlanks){
-			            		$(this).val("").trigger("change");
-			            	}
-			                return false;
-			            case 8: //delete
-			            	if(Browser.isIOS()){
-			            		return true;
-			            	}
-			            	var current_val = $(this).val();
-			            	if(options.allowBlanks){
-			            		$(this).val(current_val.substring(0,current_val.length-1)).trigger("change");
-			            	}
-			            	if(current_val.length-1<=0){
-			            		prev.focus();
-			            	}
-		            		return false;
-			            case 32: //space
-			            	if(options.byWords){
-			            		break;
-			            	}
-			            	if(options.allowBlanks){
-			            		$(this).val(" ").trigger("change");
-			            		next.focus();
-			            	}
-			            	return false;
-			            case 37: //left arrow
-			            	if(!options.byWords){
-			            		(rtl?next:prev).focus();
-			            		return false;
-			            	}
-			            	return true;
-			           case 39: //right arrow
-			        	   if(!options.byWords){
-			        		   	(rtl?prev:next).focus();
-			        		   	return false;
-			        	   }
-			        	   return true;
-			        }
-			        
-			    }).on(Browser.isAndroid()?"input":"keypress",function(e){
-			        var pos = $(this).data("pos");
-			        var next = getByPos(pos+1);
-			        var keycode = e.keyCode || e.which || 0;
-			        var key = String.fromCharCode(keycode);
-			        var length = $(this).val().length;
-			        var maxlength = parseInt($(this).attr("maxlength"));
-			        if(!options.allowNumbers && !isNaN(key)){
-			        	return false;
-			        }
-			        if(options.restrict && keycode!=0 && !(new RegExp('['+options.restrict+']')).test(key)){
-			        	return false;
-			        }
-			        if(key!="" && keycode!=0){
-			        	if(options.byWords){
-			        		$(this).val(($(this).val()+key).substring(0,maxlength)).trigger("change");
-			        	} else {
-			        		$(this).val(key).trigger("change");
-			        	}
-			        }
-			        length = $(this).val().length;
-			        if(!Browser.isIOS() && next.length==0 && (options.blurOnLastChar || keycode==0)){
-			        	$(this).blur();
-			        } else {
-			        	if(Browser.isAndroid()){
-			        		$(this).val($(this).val().substring(0,maxlength));
-			        	}
-			        	if(Browser.isAndroid() && next.val()!=""){
-			        		$(this).blur();
-			        	} else {
-			        		if(length>=maxlength && !Browser.isIOS()){
-			        			next.focus();
-			        		}
-			        	}
-			        }
-			        if(keycode!=0){
-			        	return false;
-			        }
 			    });
-				
-				if(Browser.isAndroid()){
+				if(!Browser.isOldAndroid()){
+					$(chars).keydown(function(e){
+				        var rtl = isRTL($(this));
+				        var pos = $(this).data("pos");
+				        var next = getByPos(pos+1);
+				        var prev = getByPos(pos-1);
+				        switch(e.keyCode){
+				            case 46: //delete
+				            	if(option.byWords){
+				            		break;
+				            	}
+				            	if(options.allowBlanks){
+				            		$(this).val("").trigger("change");
+				            	}
+				                return false;
+				            case 8: //delete
+				            	if(Browser.isProblematic()){
+				            		return true;
+				            	}
+				            	var current_val = $(this).val();
+				            	if(options.allowBlanks){
+				            		$(this).val(current_val.substring(0,current_val.length-1)).trigger("change");
+				            	}
+				            	if(current_val.length-1<=0){
+				            		prev.focus();
+				            	}
+			            		return false;
+				            case 32: //space
+				            	if(options.byWords){
+				            		break;
+				            	}
+				            	if(options.allowBlanks){
+				            		$(this).val(" ").trigger("change");
+				            		next.focus();
+				            	}
+				            	return false;
+				            case 37: //left arrow
+				            	if(!options.byWords){
+				            		(rtl?next:prev).focus();
+				            		return false;
+				            	}
+				            	return true;
+				           case 39: //right arrow
+				        	   if(!options.byWords){
+				        		   	(rtl?prev:next).focus();
+				        		   	return false;
+				        	   }
+				        	   return true;
+				        }
+				    }).on(Browser.isAndroid()?"input":"keypress",function(e){
+				        var pos = $(this).data("pos");
+				        var next = getByPos(pos+1);
+				        var keycode = e.keyCode || e.which || 0;
+				        var key = String.fromCharCode(keycode);
+				        var length = $(this).val().length;
+				        var maxlength = parseInt($(this).attr("maxlength"));
+				        if(!options.allowNumbers && !isNaN(key)){
+				        	return false;
+				        }
+				        if(options.restrict && keycode!=0 && !(new RegExp('['+options.restrict+']')).test(key)){
+				        	return false;
+				        }
+				        if(key!="" && keycode!=0){
+				        	if(options.byWords){
+				        		$(this).val(($(this).val()+key).substring(0,maxlength)).trigger("change");
+				        	} else {
+				        		$(this).val(key).trigger("change");
+				        	}
+				        }
+				        length = $(this).val().length;
+				        if(!Browser.isProblematic() && next.length==0 && (options.blurOnLastChar || keycode==0)){
+				        	$(this).blur();
+				        } else {
+				        	if(Browser.isAndroid()){
+				        		$(this).val($(this).val().substring(0,maxlength));
+				        	}
+				        	if(Browser.isAndroid() && next.val()!=""){
+				        		$(this).blur();
+				        	} else {
+				        		if(length>=maxlength && !Browser.isProblematic()){
+				        			next.focus();
+				        		}
+				        	}
+				        }
+				        if(keycode!=0){
+				        	return false;
+				        }
+				    });
+				}
+				if(Browser.isAndroid() && !Browser.isOldAndroid()){
 					chars.focus(function(){
 						$(this).val("").trigger("change");
 					})
@@ -273,13 +330,12 @@
 		    }
 		    
 		    options = $.extend(defaultOptions, options);
-		    if(Browser.isIOS()){
+		    if(Browser.isProblematic()){
 		    	options.byWords = true;
 		    }
 			placeholder = initPlaceholder();
 			init();
 		};
-		
 	    $(this).filter("input[type=text]").each(function(){
 	    	instances.push(new FortuneWheel($(this), options));
 	    });
