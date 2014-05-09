@@ -6,7 +6,7 @@ jQuery plugin for creating "Wheel of Fortune" styled input texts (separating cha
 Example For Use:
 
 	$(document).ready(function(){
-		$("#result").fortuneWheel({
+		$("input.wof").fortuneWheel({
 			/*
 			//Optional values and their defaults
 			placeholder: null, 					// The element to put the characters in
@@ -21,14 +21,21 @@ Example For Use:
 			eventFull: 'change-full', 			// name for event triggered (after change) when the pattern is full
 			eventNotFull: 'change-not-full', 	// name for event triggered (after change) when the pattern is not full yet
 			allowNumbers: false, 				// Whether to allow numbers input (doesn't work well when in RTL)
-			trimValue: true 					// Whether to trim the result when it is returned
+			trimValue: true, 					// Whether to trim the result when it is returned
+			filledClass: 'filled', 				// A class added to input when it is fill
 			*/
-			restrict: "א-תa-zA-Z",				// Regular expression set of characthers allowed to be entered
-			full: function(val){ 				//callback when full
-				$("#full_caption").text("Full: "+val);
+			//restrict: "א-תa-zA-Z",				// Regular expression's set of characthers allowed to be entered
+			byWords: true,						// Split the pattern to words instead of chars
+			full: function(val){ 				// Callback when full
+				$("#result_demo").text("Full: "+val);
 			},
 			partial: function(val){ 			//callback when change partially
-				$("#full_caption").text("NOT FULL");
+				$("#result_demo").text("NOT FULL");
 			}
 		});
 	});
+
+	
+When the HTML is:
+	<input type="text" class="wof" data-pattern="[2,3,2]" />
+	<div id="result_demo"></div>

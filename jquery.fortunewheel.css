@@ -1,3 +1,4 @@
 @CHARSET "UTF-8";
 .char{width: 30px; height: 30px; background-color: grey; border: 1px solid black; margin: 0 2px; line-height: 30px; text-align: center}
 .char:focus{background-color: blue; color: white}
+input.word.filled{background-color: yellow}

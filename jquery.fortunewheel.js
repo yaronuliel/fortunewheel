@@ -3,12 +3,16 @@
  * Author: Yaron Uliel
  * Copyright: 2014 Social It Tech Marketing
  */
-(function($, w, d){
+(function($, w, d){ 
 	$.fn.fortuneWheel = function(options){
 		var Browser = {
 			isAndroid: function(){
 				return w.navigator.userAgent.toLowerCase().indexOf("android")>-1;
-			}	
+			},
+			isIOS: function(){
+				var iOS = ( navigator.userAgent.match(/(iPad|iPhone|iPod)/g) ? true : false );
+				return iOS;
+			}
 		};
 		var instances = [];
 		var FortuneWheel = function(elem, options){
@@ -25,6 +29,9 @@
 				allowBlanks: true, 	
 				restrict: null, 		// regex for allowed characters
 				blurOnLastChar: false,
+				byWords: false,
+				charSize: 30,
+				filledClass: 'filled',
 				eventFull: 'change-full',
 				eventNotFull: 'change-not-full',
 				full: function(value){}, //callback when full
@@ -36,8 +43,9 @@
 			this.isFull = function(){
 				var full = true;
 				chars.each(function(){
-		            var val = $(this).val();
-		            if($.trim(val)==""){
+		            var val = $.trim($(this).val());
+		            var length = $(this).attr("maxlength");
+		            if(val.length<length){
 		            	full = false;
 		            	return false;
 		            }
@@ -77,6 +85,11 @@
 			}
 			
 			function fullTrigger(){
+				$(chars).each(function(){
+					var val = $.trim($(this).val()).replace(/\s/g,'').length;
+					var maxlength = parseInt($(this).attr("maxlength"));
+					$(this).toggleClass(options.filledClass,val>=maxlength);
+				});
 				if(instance.isFull()){
 		        	elem.trigger(options.eventFull);
 		        	if(typeof(options.full)=="function"){
@@ -94,43 +107,64 @@
 				$(chars).change(function(){
 			        elem.val(instance.getValue());
 			        fullTrigger();
+				}).keyup(function(e){
+					fullTrigger();
 			    }).keydown(function(e){
 			        var rtl = isRTL($(this));
 			        var pos = $(this).data("pos");
 			        var next = getByPos(pos+1);
 			        var prev = getByPos(pos-1);
 			        switch(e.keyCode){
-			            case 46: //backspace
+			            case 46: //delete
+			            	if(Browser.isIOS() || option.byWords){
+			            		break;
+			            	}
 			            	if(options.allowBlanks){
 			            		$(this).val("").trigger("change");
 			            	}
 			                return false;
-			            case 8: //backspace
-
-			            	if(options.allowBlanks){
-			            		$(this).val("").trigger("change");
+			            case 8: //delete
+			            	if(Browser.isIOS()){
+			            		return true;
 			            	}
-		            		prev.focus();
+			            	var current_val = $(this).val();
+			            	if(options.allowBlanks){
+			            		$(this).val(current_val.substring(0,current_val.length-1)).trigger("change");
+			            	}
+			            	if(current_val.length-1<=0){
+			            		prev.focus();
+			            	}
 		            		return false;
 			            case 32: //space
+			            	if(options.byWords){
+			            		break;
+			            	}
 			            	if(options.allowBlanks){
 			            		$(this).val(" ").trigger("change");
 			            		next.focus();
 			            	}
 			            	return false;
 			            case 37: //left arrow
-			                (rtl?next:prev).focus();
-			                return false;
+			            	if(!options.byWords){
+			            		(rtl?next:prev).focus();
+			            		return false;
+			            	}
+			            	return true;
 			           case 39: //right arrow
-			                (rtl?prev:next).focus();
-			                return false;
-			           
+			        	   if(!options.byWords){
+			        		   	(rtl?prev:next).focus();
+			        		   	return false;
+			        	   }
+			        	   return true;
 			        }
+			        
 			    }).on(Browser.isAndroid()?"input":"keypress",function(e){
 			        var pos = $(this).data("pos");
 			        var next = getByPos(pos+1);
 			        var keycode = e.keyCode || e.which || 0;
 			        var key = String.fromCharCode(keycode);
+			        var length = $(this).val().length;
+			        var maxlength = parseInt($(this).attr("maxlength"));
 			        if(!options.allowNumbers && !isNaN(key)){
 			        	return false;
 			        }
@@ -138,18 +172,25 @@
 			        	return false;
 			        }
 			        if(key!="" && keycode!=0){
-			            $(this).val(key).trigger("change");
+			        	if(options.byWords){
+			        		$(this).val(($(this).val()+key).substring(0,maxlength)).trigger("change");
+			        	} else {
+			        		$(this).val(key).trigger("change");
+			        	}
 			        }
-			        if(next.length==0 && (options.blurOnLastChar || keycode==0)){
+			        length = $(this).val().length;
+			        if(!Browser.isIOS() && next.length==0 && (options.blurOnLastChar || keycode==0)){
 			        	$(this).blur();
 			        } else {
 			        	if(Browser.isAndroid()){
-			        		$(this).val($(this).val().substring(0,1));
+			        		$(this).val($(this).val().substring(0,maxlength));
 			        	}
 			        	if(Browser.isAndroid() && next.val()!=""){
 			        		$(this).blur();
 			        	} else {
-			        		next.focus();
+			        		if(length>=maxlength && !Browser.isIOS()){
+			        			next.focus();
+			        		}
 			        	}
 			        }
 			        if(keycode!=0){
@@ -197,6 +238,7 @@
 			}
 			
 			function init(){
+				var bw = !!options.byWords;
 		        placeholder.html();
 		        var pattern = getPattern();
 		        var currentChar = null;
@@ -205,12 +247,16 @@
 		            if(isNaN(pattern[i])){
 		                continue;
 		            }
-		            for(var j=0; j<pattern[i]; j++){
-		            	currentChar = $('<input type="text" data-pos="'+(chars.length)+'" maxlength="1" class="char t" />');
+		            var inputs = bw?1:pattern[i];
+		            for(var j=0; j<inputs; j++){
+		            	var cls = bw?"word":"char";
+		            	var maxlength = bw?pattern[i]:1;
+		            	currentChar = $('<input type="text" data-pos="'+(chars.length)+'" maxlength="'+maxlength+'" class="'+cls+'" />');
 		            	if(!options.showCaretSymbol){
 		            		currentChar.attr("readonly","readonly");
 		            	}
 		            	placeholder.append(currentChar);
+		            	currentChar.css({height:options.charSize, width: options.charSize*maxlength, lineHeight: options.charSize+"px"});
 		            	chars.push(currentChar);
 		            }
 		            if(i<pattern.length && currentChar!=null){
@@ -227,6 +273,9 @@
 		    }
 		    
 		    options = $.extend(defaultOptions, options);
+		    if(Browser.isIOS()){
+		    	options.byWords = true;
+		    }
 			placeholder = initPlaceholder();
 			init();
 		};
