@@ -4,9 +4,14 @@
 	<meta charset="UTF-8" />
 	<title>Wheel of Fortune Input</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-	<script src="https://code.jquery.com/jquery-1.11.0.min.js"></script>
+	<script src="https://code.jquery.com/jquery-1.11.1.js"></script>
 	<script src="jquery.fortunewheel.js"></script>
 	<link rel="stylesheet" href="jquery.fortunewheel.css" />
+	<style>
+	.fortune-wheel{border: 1px solid #f4f4f4; padding: 4px; display: inline-block;}
+	.char{background-color: white; border: none;border-bottom: 2px solid grey;}
+	.char:focus{background-color: white; outline: none; border-bottom: 2px solid black; color: black; font-weight: bold;}
+	</style>
 	<script>
 	var options = {
 		/*
@@ -29,6 +34,7 @@
 		//restrict: "א-תa-zA-Z",				// Regular expression's set of characthers allowed to be entered
 		//byWords: true,						// Split the pattern to words instead of chars
 		debug: FortuneWheel.getDebugger("#log"),
+		hideElem: false,
 		full: function(val){ 				// Callback when full
 			$("#result_demo").text("Full: "+val);
 		},
@@ -43,6 +49,18 @@
 		});
 		$(document).on("click","button.destroy", function(){
 			$(this).parents(".group").find("input.wof").fortuneWheel("destroy");
+		});
+
+		$(document).on("click","button.change",function(e){
+			var input = $(this).parents(".group").find("input.wof");
+			input.fortuneWheel("destroy");
+			var length = Math.floor(Math.random()*4)+1;
+			var pattern = [];
+			for(var i = 0; i<length; i++){
+				pattern[i]=Math.floor(Math.random()*4)+2;
+			}
+			input.data("pattern",pattern);
+			input.fortuneWheel(options);
 		});
 
 		$("#new").click(function(){
@@ -62,7 +80,9 @@
 		<div id="result_demo"></div>
 		<div id="log"></div>
 		<button class="attach">Attach</button>
-		<button class="destroy">Distroy</button><br />
+		<button class="destroy">Distroy</button>
+		<button class="change">Change Pattern</button>
+
 	</div>
 
 	<button id="new">New element</button>

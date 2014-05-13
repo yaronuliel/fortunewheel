@@ -98,12 +98,13 @@ window.FortuneWheel = {
 			
 			
 			
-			var placeholder = null;
-			var chars = [];
-			instance.chars = chars;
+			var placeholder = null,
+				chars = [],
+				jQueryChars = [];
+			
 			this.isFull = function(){
 				var full = true;
-				chars.each(function(){
+				$(chars).each(function(){
 		            var val = $.trim($(this).val());
 		            var length = $(this).attr("maxlength");
 		            if(val.length<length){
@@ -115,7 +116,7 @@ window.FortuneWheel = {
 			};
 			this.getValue = function(){
 		        var text = "";
-		        chars.each(function(){
+		        $(chars).each(function(){
 		            var val = $(this).val();
 		            text+=(val==""?" ":val);
 		            if($(this).hasClass(options.spaceClass)){
@@ -145,6 +146,7 @@ window.FortuneWheel = {
 				return $(pos>=0 && pos<chars.length?chars[pos]:null);
 			}
 			
+
 			function fullTrigger(){
 				$(chars).each(function(){
 					var val = $.trim($(this).val()).replace(/\s/g,'').length;
@@ -170,9 +172,29 @@ window.FortuneWheel = {
 				}
 			}
 			
+			function setValue(value){
+				var current_value = instance.getValue();
+				if(current_value==value){
+					return;
+				}
+				
+				var start_val = value.replace(/\s+/g,"");
+				var total_chars = 0;
+	            $(jQueryChars).each(function(i){
+	            	var currentChar = $(this);
+	            	var maxlength = parseInt(currentChar.prop("maxlength"));
+	            	currentChar.val(start_val.substr(total_chars, maxlength));
+	            	total_chars+=maxlength;
+	            });
+	            
+			}
+
 			function initEventListeners(){
-				$(chars).change(function(){
-			        elem.val(instance.getValue());
+				$(chars).change(function(e){
+					var new_val = instance.getValue();
+					if(new_val!=elem.val()){
+						elem.val(new_val);
+			        }
 			        fullTrigger();
 				}).keyup(function(e){
 					fullTrigger();
@@ -288,6 +310,11 @@ window.FortuneWheel = {
 						}
 					});
 				}
+
+				$(elem).change(function(){
+					var value = $(this).val();
+					setValue(value);
+				})
 			}
 			
 			function getPattern(){
@@ -305,13 +332,13 @@ window.FortuneWheel = {
 				}
 			}
 			
+
 			function init(){
 				var bw = !!options.byWords;
-				var start_val = elem.val().replace(/\s+/g,"");
 		        placeholder.html();
 		        var pattern = getPattern();
 		        var currentChar = null;
-		        var total_chars = 0;
+		        jQueryChars = [];
 		        for(var i in pattern){
 		            if(isNaN(pattern[i])){
 		                continue;
@@ -320,21 +347,20 @@ window.FortuneWheel = {
 		            for(var j=0; j<inputs; j++){
 		            	var cls = bw?"word":"char";
 		            	var maxlength = bw?pattern[i]:1;
-		            	currentChar = $('<input type="text" data-pos="'+(chars.length)+'" maxlength="'+maxlength+'" class="'+cls+'" />');
+		            	currentChar = $('<input type="text" data-pos="'+(jQueryChars.length)+'" maxlength="'+maxlength+'" class="'+cls+'" />');
 		            	if(!options.showCaretSymbol){
-		            		currentChar.attr("readonly","readonly");
+		            		currentChar.attr("readonly","readonly"); 
 		            	}
-	            		currentChar.val(start_val.substr(total_chars, maxlength));
-		            	total_chars+=maxlength;
 		            	placeholder.append(currentChar);
 		            	currentChar.css({height:options.charSize, width: options.charSize*maxlength, lineHeight: options.charSize+"px"});
-		            	chars.push(currentChar);
+		            	jQueryChars.push(currentChar);
 		            }
-		            if(i<pattern.length && currentChar!=null){
+		            if(i<pattern.length-1 && currentChar!=null){
 		            	currentChar.addClass(options.spaceClass).css((isRTL(placeholder)?"margin-left":"margin-right"),options.wordSpace);
 		            }
 		        }
-		        chars = $(chars).map (function () {return this.toArray(); } );
+				setValue(elem.val());
+		        chars = $(jQueryChars).map (function () {return this.toArray(); } );
 
 		        initEventListeners();
 		        if(options.hideElem){
