@@ -3,7 +3,7 @@
  * Author: Yaron Uliel
  * Copyright: 2014 Social It Tech Marketing
  */
-/*window.FortuneWheel = {
+window.FortuneWheel = {
 	getConsoleDebugger: function(){
 		return {
 			clear: function(){
@@ -43,28 +43,32 @@
 	init: function(selector,options){
 		$(selector).fortuneWheel(options);
 	}
-};*/
+};
 
 (function($, w, d){ 
-	$.fn.fortuneWheel = function(options){
-		var Browser = {
-			ua: w.navigator.userAgent.toLowerCase(),
-			isAndroid: function(){
-				return Browser.ua.indexOf("android")>-1;
-			},
-			isIOS: function(){
-				var iOS = ( Browser.ua.match(/(ipad|iphone|ipod)/g) ? true : false );
-				return iOS;
-			},
-			isOldAndroid: function(){
-				return Browser.ua.indexOf("android 2.")>-1;
-			},
-			isProblematic: function(){
-				return Browser.isIOS() || Browser.isOldAndroid();
+	var Browser = {
+		ua: w.navigator.userAgent.toLowerCase(),
+		isAndroid: function(){
+			return Browser.ua.indexOf("android")>-1;
+		},
+		isIOS: function(){
+			var iOS = ( Browser.ua.match(/(ipad|iphone|ipod)/g) ? true : false );
+			return iOS;
+		},
+		isOldAndroid: function(){
+			return Browser.ua.indexOf("android 2.")>-1 || Browser.ua.indexOf("gecko) version/")>-1;
+		},
+		isProblematic: function(){
+			return Browser.isIOS() || Browser.isOldAndroid();
+		}
+	};
+	var instances = [];
+	var FortuneWheel = function(elem, options){
+			
+			this.getElement = function(){
+				return elem;
 			}
-		};
-		var instances = [];
-		var FortuneWheel = function(elem, options){
+			
 			var defaultOptions = {
 				placeholder: null,
 				pattern: [],
@@ -75,7 +79,8 @@
 				placeholderClass: 'fortune-wheel',
 				allowNumbers: false,
 				trimValue: true,
-				allowBlanks: true, 	
+				allowBlanks: false,
+				allowDeleting: true,
 				restrict: null, 		// regex for allowed characters
 				blurOnLastChar: false,
 				byWords: false,
@@ -88,8 +93,14 @@
 				partial: function(value){} //callback when change partially
 			};
 			var instance = this;
+			
+			elem.data('fortune_wheel', instance);
+			
+			
+			
 			var placeholder = null;
 			var chars = [];
+			instance.chars = chars;
 			this.isFull = function(){
 				var full = true;
 				chars.each(function(){
@@ -113,7 +124,7 @@
 		        });
 		        return options.trimValue?$.trim(text):text;
 		    };
-			
+		    
 			function isRTL(elem){
 				return $(elem).css("direction").toLowerCase()=="rtl";
 			}
@@ -181,12 +192,12 @@
 				            		$(this).val("").trigger("change");
 				            	}
 				                return false;
-				            case 8: //delete
+				            case 8: //backspace
 				            	if(Browser.isProblematic()){
 				            		return true;
 				            	}
 				            	var current_val = $(this).val();
-				            	if(options.allowBlanks){
+				            	if(options.allowDeleting){
 				            		$(this).val(current_val.substring(0,current_val.length-1)).trigger("change");
 				            	}
 				            	if(current_val.length-1<=0){
@@ -296,10 +307,11 @@
 			
 			function init(){
 				var bw = !!options.byWords;
+				var start_val = elem.val().replace(/\s+/g,"");
 		        placeholder.html();
 		        var pattern = getPattern();
 		        var currentChar = null;
-		        
+		        var total_chars = 0;
 		        for(var i in pattern){
 		            if(isNaN(pattern[i])){
 		                continue;
@@ -312,6 +324,8 @@
 		            	if(!options.showCaretSymbol){
 		            		currentChar.attr("readonly","readonly");
 		            	}
+	            		currentChar.val(start_val.substr(total_chars, maxlength));
+		            	total_chars+=maxlength;
 		            	placeholder.append(currentChar);
 		            	currentChar.css({height:options.charSize, width: options.charSize*maxlength, lineHeight: options.charSize+"px"});
 		            	chars.push(currentChar);
@@ -328,6 +342,12 @@
 		        }
 		        fullTrigger();
 		    }
+
+		    this.destroy = function(){
+		    	$(chars).remove();
+		    	elem.show();
+
+		    }
 		    
 		    options = $.extend(defaultOptions, options);
 		    if(Browser.isProblematic()){
@@ -336,8 +356,41 @@
 			placeholder = initPlaceholder();
 			init();
 		};
+
+		FortuneWheel.destroy = function(elem){
+			var pos = getInstancePerElement(elem);
+			if(pos>-1){
+				var instance = instances[pos];
+				instance.destroy();
+				instances[pos] = null;
+			}
+			
+		};
+
+		function getInstancePerElement(elem){
+			var pos = -1;
+			if(elem!=null){
+				for(var i in instances){
+					if(instances[i]!=null && elem.get(0) == instances[i].getElement().get(0)){
+						pos = i;
+						break;
+					}
+				}
+			}
+			return pos;
+		}
+	$.fn.fortuneWheel = function(options){
 	    $(this).filter("input[type=text]").each(function(){
-	    	instances.push(new FortuneWheel($(this), options));
+			var elem = $(this);
+	    	if(options=="destroy"){
+	    		FortuneWheel.destroy(elem);
+	    	} else {
+	    		var pos = getInstancePerElement(elem);
+
+	    		if(pos==-1){
+	    			instances.push(new FortuneWheel(elem, options));
+	    		}
+	    	}
 	    });
 	    return this;
 	};
