@@ -42,3 +42,8 @@ When the HTML is:
 	<div id="result_demo"></div>
 	
 	
+
+In order to destroy the plugin from a specific input you can call
+
+	$("input.wof").fortuneWheel("destroy")
+	
